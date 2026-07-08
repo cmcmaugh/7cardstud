@@ -65,6 +65,7 @@
     .seat.starter { outline: 2px solid #5fd0a5; outline-offset: -4px; }
     .seat.turn { box-shadow: 0 0 0 3px rgba(242,193,78,.42), inset 0 0 0 1px rgba(242,193,78,.38); }
     .seat.folded { opacity: .55; }
+    .seat.busted { opacity: .45; border-style: dashed; }
     .seat h2 { margin: 0 0 8px; font-size: 15px; font-weight: 700; }
     .badges { display: flex; gap: 6px; flex-wrap: wrap; min-height: 22px; margin-bottom: 6px; }
     .badge {
@@ -91,7 +92,18 @@
       font-size: 15px;
       border: 1px solid #d6d0c2;
     }
+    .card.back {
+      color: transparent;
+      background:
+        repeating-linear-gradient(45deg, #234f71 0 4px, #193b56 4px 8px);
+      border-color: #7ca5c6;
+    }
     .card.red { color: #b92225; }
+    .downcards {
+      border-top: 1px dashed rgba(243,240,232,.35);
+      padding-top: 8px;
+      margin-top: 8px;
+    }
     .meta { margin: 0; color: #d8d0c2; font-size: 13px; line-height: 1.35; }
     aside { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
     .panel {
@@ -281,12 +293,23 @@ reset_game = browser_api.reset_game
       cards.forEach((card) => container.appendChild(cardNode(card)));
     }
 
+    function renderCardBacks(container, count) {
+      container.textContent = "";
+      if (!count) return;
+      for (let index = 0; index < count; index += 1) {
+        const span = document.createElement("span");
+        span.className = "card back";
+        span.textContent = "X";
+        container.appendChild(span);
+      }
+    }
+
     function render(state) {
       currentHandId = state.hand_id;
       currentComplete = Boolean(state.complete);
       $("street").textContent = `${state.complete ? "Complete" : state.street} · Hand ${state.hand_number || 1}`;
       $("pot").textContent = `Pot $${state.pot}`;
-      $("newHand").style.display = state.complete ? "inline-block" : "none";
+      $("newHand").style.display = state.complete && !state.game_over ? "inline-block" : "none";
       $("newHand").textContent = state.complete ? "Continue" : "Start Hand";
       $("error").textContent = "";
 
@@ -296,6 +319,7 @@ reset_game = browser_api.reset_game
       const current = document.createElement("div");
       current.innerHTML = pending
         ? `<span class="decision">${pending.street}</span><br>${pending.private_cards} / ${pending.exposed_cards}<br>Call $${pending.call_amount}`
+        : state.game_over ? `Game over. Winner: ${state.winner || "last player standing"}`
         : state.complete ? `Winner: ${state.winner}` : "Waiting";
       decision.appendChild(current);
       if (state.last_decision_review) {
@@ -342,17 +366,17 @@ reset_game = browser_api.reset_game
       const felt = document.createElement("div");
       felt.className = "table-felt";
       seats.appendChild(felt);
-      const seatCount = Math.max(state.seats.length, 2);
-      state.seats.forEach((seat, index) => {
-        const angle = (90 + (index * 360 / seatCount)) * Math.PI / 180;
+      const displaySeats = [...state.seats, ...(state.busted_seats || []).map((seat) => ({...seat, busted: true, folded: true, exposed_cards: "", private_cards: "", in_play: 0}))];
+      displaySeats.forEach((seat, index) => {
+        const angle = (90 + (index * 360 / Math.max(displaySeats.length, 2))) * Math.PI / 180;
         const left = 50 + Math.cos(angle) * 36;
         const top = 50 + Math.sin(angle) * 39;
         const section = document.createElement("section");
-        section.className = "seat" + (seat.name === "Hero" ? " hero" : "") + (pending && pending.seat === seat.name ? " turn" : "") + (seat.started_current_round ? " starter" : "") + (seat.folded ? " folded" : "");
+        section.className = "seat" + (seat.name === "Hero" ? " hero" : "") + (pending && pending.seat === seat.name ? " turn" : "") + (seat.started_current_round ? " starter" : "") + (seat.busted ? " busted" : "") + (seat.folded ? " folded" : "");
         section.style.left = `${left}%`;
         section.style.top = `${top}%`;
         const title = document.createElement("h2");
-        title.textContent = `${seat.name} · stack $${seat.bankroll}${seat.folded ? " · folded" : ""}`;
+        title.textContent = `${seat.name} · stack $${seat.bankroll}${seat.busted ? " · busted" : seat.folded ? " · folded" : ""}`;
         section.appendChild(title);
         const badges = document.createElement("div");
         badges.className = "badges";
@@ -377,10 +401,13 @@ reset_game = browser_api.reset_game
         exposed.className = "cards";
         renderCards(exposed, seat.exposed_cards);
         section.appendChild(exposed);
+        const privateCards = document.createElement("div");
+        privateCards.className = "cards downcards";
         if (seat.private_cards) {
-          const privateCards = document.createElement("div");
-          privateCards.className = "cards";
           renderCards(privateCards, seat.private_cards);
+          section.appendChild(privateCards);
+        } else if (seat.private_count) {
+          renderCardBacks(privateCards, seat.private_count);
           section.appendChild(privateCards);
         }
         seats.appendChild(section);

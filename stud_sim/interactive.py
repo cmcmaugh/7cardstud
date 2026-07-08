@@ -154,6 +154,7 @@ class InteractiveStudHand:
                     "folded": seat.folded,
                     "exposed_cards": card_list(seat.cards_up),
                     "private_cards": card_list(seat.cards_down) if index == self.human_seat or self.complete else "",
+                    "private_count": len(seat.cards_down),
                 }
                 for index, seat in enumerate(self.seats)
             ],

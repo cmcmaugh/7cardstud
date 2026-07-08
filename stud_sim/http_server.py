@@ -22,6 +22,10 @@ class GameSession:
     seed: int | None
     hand_number: int
     bankrolls: list[int]
+    active_seats: list[int]
+    last_table_seats: list[int]
+    complete: bool = False
+    game_over: bool = False
 
     def next_seed(self) -> int | None:
         if self.seed is None:
@@ -108,6 +112,7 @@ INDEX_HTML = """<!doctype html>
     .seat.starter { outline: 2px solid #5fd0a5; outline-offset: -4px; }
     .seat.turn { box-shadow: 0 0 0 3px rgba(242,193,78,.42), inset 0 0 0 1px rgba(242,193,78,.38); }
     .seat.folded { opacity: .55; }
+    .seat.busted { opacity: .45; border-style: dashed; }
     .seat h2 { margin: 0 0 8px; font-size: 15px; font-weight: 700; }
     .badges { display: flex; gap: 6px; flex-wrap: wrap; min-height: 22px; margin-bottom: 6px; }
     .badge {
@@ -134,7 +139,18 @@ INDEX_HTML = """<!doctype html>
       font-size: 15px;
       border: 1px solid #d6d0c2;
     }
+    .card.back {
+      color: transparent;
+      background:
+        repeating-linear-gradient(45deg, #234f71 0 4px, #193b56 4px 8px);
+      border-color: #7ca5c6;
+    }
     .card.red { color: #b92225; }
+    .downcards {
+      border-top: 1px dashed rgba(243,240,232,.35);
+      padding-top: 8px;
+      margin-top: 8px;
+    }
     .meta { margin: 0; color: #d8d0c2; font-size: 13px; line-height: 1.35; }
     aside { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
     .panel {
@@ -273,12 +289,23 @@ INDEX_HTML = """<!doctype html>
       cards.forEach((card) => container.appendChild(cardNode(card)));
     }
 
+    function renderCardBacks(container, count) {
+      container.textContent = "";
+      if (!count) return;
+      for (let index = 0; index < count; index += 1) {
+        const span = document.createElement("span");
+        span.className = "card back";
+        span.textContent = "X";
+        container.appendChild(span);
+      }
+    }
+
     function render(state) {
       currentHandId = state.hand_id;
       currentComplete = Boolean(state.complete);
       $("street").textContent = `${state.complete ? "Complete" : state.street} · Hand ${state.hand_number || 1}`;
       $("pot").textContent = `Pot $${state.pot}`;
-      $("newHand").style.display = state.complete ? "inline-block" : "none";
+      $("newHand").style.display = state.complete && !state.game_over ? "inline-block" : "none";
       $("newHand").textContent = state.complete ? "Continue" : "Start Hand";
       const pending = state.pending_decision;
       const decision = $("decision");
@@ -286,6 +313,7 @@ INDEX_HTML = """<!doctype html>
       const current = document.createElement("div");
       current.innerHTML = pending
         ? `<span class="decision">${pending.street}</span><br>${pending.private_cards} / ${pending.exposed_cards}<br>Call $${pending.call_amount}`
+        : state.game_over ? `Game over. Winner: ${state.winner || "last player standing"}`
         : state.complete ? `Winner: ${state.winner}` : "Waiting";
       decision.appendChild(current);
       if (state.last_decision_review) {
@@ -332,17 +360,17 @@ INDEX_HTML = """<!doctype html>
       const felt = document.createElement("div");
       felt.className = "table-felt";
       seats.appendChild(felt);
-      const seatCount = Math.max(state.seats.length, 2);
-      state.seats.forEach((seat, index) => {
-        const angle = (90 + (index * 360 / seatCount)) * Math.PI / 180;
+      const displaySeats = [...state.seats, ...(state.busted_seats || []).map((seat) => ({...seat, busted: true, folded: true, exposed_cards: "", private_cards: "", in_play: 0}))];
+      displaySeats.forEach((seat, index) => {
+        const angle = (90 + (index * 360 / Math.max(displaySeats.length, 2))) * Math.PI / 180;
         const left = 50 + Math.cos(angle) * 36;
         const top = 50 + Math.sin(angle) * 39;
         const section = document.createElement("section");
-        section.className = "seat" + (seat.name === "Hero" ? " hero" : "") + (pending && pending.seat === seat.name ? " turn" : "") + (seat.started_current_round ? " starter" : "") + (seat.folded ? " folded" : "");
+        section.className = "seat" + (seat.name === "Hero" ? " hero" : "") + (pending && pending.seat === seat.name ? " turn" : "") + (seat.started_current_round ? " starter" : "") + (seat.busted ? " busted" : "") + (seat.folded ? " folded" : "");
         section.style.left = `${left}%`;
         section.style.top = `${top}%`;
         const title = document.createElement("h2");
-        title.textContent = `${seat.name} · stack $${seat.bankroll}${seat.folded ? " · folded" : ""}`;
+        title.textContent = `${seat.name} · stack $${seat.bankroll}${seat.busted ? " · busted" : seat.folded ? " · folded" : ""}`;
         section.appendChild(title);
         const badges = document.createElement("div");
         badges.className = "badges";
@@ -367,10 +395,13 @@ INDEX_HTML = """<!doctype html>
         exposed.className = "cards";
         renderCards(exposed, seat.exposed_cards);
         section.appendChild(exposed);
+        const privateCards = document.createElement("div");
+        privateCards.className = "cards downcards";
         if (seat.private_cards) {
-          const privateCards = document.createElement("div");
-          privateCards.className = "cards";
           renderCards(privateCards, seat.private_cards);
+          section.appendChild(privateCards);
+        } else if (seat.private_count) {
+          renderCardBacks(privateCards, seat.private_count);
           section.appendChild(privateCards);
         }
         seats.appendChild(section);
@@ -521,6 +552,8 @@ class StudHTTPRequestHandler(BaseHTTPRequestHandler):
             seed=seed,
             hand_number=1,
             bankrolls=[200 for _ in range(players)],
+            active_seats=list(range(players)),
+            last_table_seats=[],
         )
         hand = _start_session_hand(session)
         self._send_json(_snapshot_with_session(hand), HTTPStatus.CREATED)
@@ -543,7 +576,15 @@ class StudHTTPRequestHandler(BaseHTTPRequestHandler):
             self._send_error(HTTPStatus.BAD_REQUEST, "hand is not complete")
             return
 
-        session.bankrolls = [seat.bankroll for seat in hand.seats]
+        _update_session_bankrolls(session, hand)
+        session.active_seats = [
+            index for index in session.active_seats if session.bankrolls[index] >= hand.config.ante
+        ]
+        if len(session.active_seats) < 2:
+            session.complete = True
+            session.game_over = True
+            self._send_json(_snapshot_with_session(hand))
+            return
         session.hand_number += 1
         next_hand = _start_session_hand(session)
         self._send_json(_snapshot_with_session(next_hand), HTTPStatus.CREATED)
@@ -591,17 +632,29 @@ def build_server(host: str, port: int) -> ThreadingHTTPServer:
 
 
 def _start_session_hand(session: GameSession) -> InteractiveStudHand:
+    if len(session.active_seats) < 2:
+        raise ValueError("fewer than two players have chips")
+    active_human_seat = session.active_seats.index(session.human_seat)
     hand = InteractiveStudHand(
-        players=session.players,
-        human_seat=session.human_seat,
+        players=len(session.active_seats),
+        human_seat=active_human_seat,
         seed=session.next_seed(),
     )
-    for seat, bankroll in zip(hand.seats, session.bankrolls):
-        seat.bankroll = bankroll
+    session.last_table_seats = list(session.active_seats)
+    for table_index, original_index in enumerate(session.last_table_seats):
+        hand.seats[table_index].bankroll = session.bankrolls[original_index]
+        if original_index != session.human_seat:
+            hand.seats[table_index].name = f"Seat {original_index + 1}"
     HANDS[hand.id] = hand
     HAND_SESSIONS[hand.id] = session
     hand.start()
     return hand
+
+
+def _update_session_bankrolls(session: GameSession, hand: InteractiveStudHand) -> None:
+    for table_index, seat in enumerate(hand.seats):
+        if table_index < len(session.last_table_seats):
+            session.bankrolls[session.last_table_seats[table_index]] = seat.bankroll
 
 
 def _snapshot_with_session(
@@ -611,8 +664,15 @@ def _snapshot_with_session(
     state = dict(snapshot or hand.snapshot())
     session = HAND_SESSIONS.get(hand.id)
     if session:
+        _update_session_bankrolls(session, hand)
         state["hand_number"] = session.hand_number
-        state["session_bankrolls"] = [seat.bankroll for seat in hand.seats]
+        state["session_bankrolls"] = session.bankrolls
+        state["busted_seats"] = [
+            {"name": "Hero" if index == session.human_seat else f"Seat {index + 1}", "bankroll": bankroll}
+            for index, bankroll in enumerate(session.bankrolls)
+            if index not in session.active_seats
+        ]
+        state["game_over"] = session.game_over
     return state
 
 

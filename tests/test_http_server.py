@@ -67,3 +67,24 @@ def test_continue_starts_next_hand_with_carried_bankrolls() -> None:
     assert next_handler.status == HTTPStatus.CREATED
     assert second["hand_number"] == 2
     assert max(seat["bankroll"] for seat in second["seats"]) > 250
+
+
+def test_continue_removes_busted_players_between_hands() -> None:
+    HANDS.clear()
+    HAND_SESSIONS.clear()
+    handler = FakeHandler()
+    handler._create_hand({"players": 3, "human_seat": 1, "seed": 4})
+    first = decode_response(handler)
+    first_hand = HANDS[first["hand_id"]]
+    first_hand.complete = True
+    first_hand.seats[0].bankroll = 200
+    first_hand.seats[1].bankroll = 0
+    first_hand.seats[2].bankroll = 200
+
+    next_handler = FakeHandler()
+    next_handler._continue(first["hand_id"])
+    second = decode_response(next_handler)
+
+    assert next_handler.status == HTTPStatus.CREATED
+    assert len(second["seats"]) == 2
+    assert second["busted_seats"] == [{"name": "Seat 2", "bankroll": 0}]
