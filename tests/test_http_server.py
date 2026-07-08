@@ -88,3 +88,24 @@ def test_continue_removes_busted_players_between_hands() -> None:
     assert next_handler.status == HTTPStatus.CREATED
     assert len(second["seats"]) == 2
     assert second["busted_seats"] == [{"name": "Seat 2", "bankroll": 0}]
+
+
+def test_continue_ends_game_when_hero_busts() -> None:
+    HANDS.clear()
+    HAND_SESSIONS.clear()
+    handler = FakeHandler()
+    handler._create_hand({"players": 3, "human_seat": 1, "seed": 5})
+    first = decode_response(handler)
+    first_hand = HANDS[first["hand_id"]]
+    first_hand.complete = True
+    first_hand.seats[0].bankroll = 0
+    first_hand.seats[1].bankroll = 200
+    first_hand.seats[2].bankroll = 200
+
+    next_handler = FakeHandler()
+    next_handler._continue(first["hand_id"])
+    state = decode_response(next_handler)
+
+    assert next_handler.status == HTTPStatus.OK
+    assert state["game_over"] is True
+    assert state["busted_seats"] == [{"name": "Hero", "bankroll": 0}]

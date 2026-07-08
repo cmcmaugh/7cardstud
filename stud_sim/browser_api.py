@@ -51,7 +51,7 @@ def continue_hand(hand_id: str) -> str:
     session.active_seats = [
         index for index in (session.active_seats or []) if (session.bankrolls or [])[index] >= hand.config.ante
     ]
-    if len(session.active_seats) < 2:
+    if len(session.active_seats) < 2 or session.human_seat not in session.active_seats:
         session.game_over = True
         return _json(_snapshot_with_session(hand))
     session.hand_number += 1
@@ -75,6 +75,8 @@ def reset_game() -> str:
 def _start_session_hand(session: BrowserSession) -> InteractiveStudHand:
     bankrolls = session.bankrolls or [200 for _ in range(session.players)]
     active_seats = session.active_seats or list(range(session.players))
+    if session.human_seat not in active_seats:
+        raise ValueError("hero is busted")
     active_human_seat = active_seats.index(session.human_seat)
     hand = InteractiveStudHand(
         players=len(active_seats),

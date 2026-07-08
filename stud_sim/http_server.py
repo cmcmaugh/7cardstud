@@ -585,7 +585,7 @@ class StudHTTPRequestHandler(BaseHTTPRequestHandler):
         session.active_seats = [
             index for index in session.active_seats if session.bankrolls[index] >= hand.config.ante
         ]
-        if len(session.active_seats) < 2:
+        if len(session.active_seats) < 2 or session.human_seat not in session.active_seats:
             session.complete = True
             session.game_over = True
             self._send_json(_snapshot_with_session(hand))
@@ -639,6 +639,8 @@ def build_server(host: str, port: int) -> ThreadingHTTPServer:
 def _start_session_hand(session: GameSession) -> InteractiveStudHand:
     if len(session.active_seats) < 2:
         raise ValueError("fewer than two players have chips")
+    if session.human_seat not in session.active_seats:
+        raise ValueError("hero is busted")
     active_human_seat = session.active_seats.index(session.human_seat)
     hand = InteractiveStudHand(
         players=len(session.active_seats),
