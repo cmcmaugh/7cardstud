@@ -55,6 +55,30 @@ chmod +x play-poker.sh
 
 The launcher picks a free local port, starts the game, and opens the browser automatically.
 
+## In-Browser Pyodide Version
+
+There is also an experimental static version that runs the Python game engine in the browser with Pyodide.
+
+Run it locally with:
+
+```bash
+python3 run_pyodide.py
+```
+
+Or serve the repo root with any static server and open:
+
+```text
+/pyodide/
+```
+
+This version keeps the Python game logic, avoids Render cold starts, and can be hosted as static files. It downloads Pyodide from the official CDN, so the first page load is larger than the server-backed version.
+
+To host it on GitHub Pages, enable Pages for the repository and open:
+
+```text
+https://cmcmaugh.github.io/7cardstud/pyodide/
+```
+
 ## Deploy on Render
 
 The included `render.yaml` defines a free Python web service. Render provides the `PORT` environment variable; the service starts with:

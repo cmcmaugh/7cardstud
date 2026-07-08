@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import os
 from uuid import uuid4
 
 from .agents import AgentDecision, DecisionRequest, RangeEquityStudAgent, normalize_action
@@ -22,6 +23,8 @@ class InteractiveStudHand:
         human_seat: int = 0,
         seed: int | None = None,
         config: GameConfig | None = None,
+        agent_simulations: int | None = None,
+        advisor_simulations: int | None = None,
     ) -> None:
         if not 2 <= players <= 8:
             raise ValueError("players must be between 2 and 8")
@@ -32,11 +35,21 @@ class InteractiveStudHand:
         self.seed = seed
         self.deck = Deck(seed)
         self.human_seat = human_seat
-        self.advisor = RangeEquityStudAgent("Advisor", seed=(seed or 0) + 100_000, simulations=900)
+        self.agent_simulations = agent_simulations or int(os.environ.get("STUD_AGENT_SIMS", "450"))
+        self.advisor_simulations = advisor_simulations or int(os.environ.get("STUD_ADVISOR_SIMS", "900"))
+        self.advisor = RangeEquityStudAgent(
+            "Advisor",
+            seed=(seed or 0) + 100_000,
+            simulations=self.advisor_simulations,
+        )
         self.seats = [
             Seat(
                 name="Hero" if index == human_seat else f"Seat {index + 1}",
-                agent=RangeEquityStudAgent(f"Seat {index + 1}", seed=(seed or 0) + index),
+                agent=RangeEquityStudAgent(
+                    f"Seat {index + 1}",
+                    seed=(seed or 0) + index,
+                    simulations=self.agent_simulations,
+                ),
             )
             for index in range(players)
         ]
