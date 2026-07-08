@@ -1,0 +1,4 @@
+[mcp_servers.stud_sim]
+command = "python3"
+args = ["-m", "stud_sim.mcp_server"]
+cwd = "/home/conor/projects/poker"
