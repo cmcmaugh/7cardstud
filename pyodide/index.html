@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>7-Card Stud</title>
+  <script src="./build_info.js"></script>
   <script src="https://cdn.jsdelivr.net/pyodide/v314.0.2/full/pyodide.js"></script>
   <style>
     :root {
@@ -185,7 +186,7 @@
     <header>
       <div>
         <h1>7-Card Stud</h1>
-        <div class="build">build 396677b</div>
+        <div class="build">build <span id="buildId">dev</span></div>
       </div>
       <div class="controls">
         <button class="primary" id="newHand" disabled>Loading Python...</button>
@@ -223,6 +224,7 @@
     let currentHandId = null;
     let currentComplete = false;
     const $ = (id) => document.getElementById(id);
+    $("buildId").textContent = window.STUD_BUILD_ID || "dev";
 
     const pythonFiles = [
       "__init__.py",

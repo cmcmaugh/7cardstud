@@ -9,6 +9,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
 from urllib.parse import urlparse
 
+from .build_info import build_id
 from .interactive import InteractiveStudHand
 
 HANDS: dict[str, InteractiveStudHand] = {}
@@ -33,7 +34,7 @@ class GameSession:
         return self.seed + self.hand_number - 1
 
 
-INDEX_HTML = """<!doctype html>
+INDEX_HTML_TEMPLATE = """<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -236,7 +237,7 @@ INDEX_HTML = """<!doctype html>
     <header>
       <div>
         <h1>7-Card Stud</h1>
-        <div class="build">build 396677b</div>
+        <div class="build">build __BUILD_ID__</div>
       </div>
       <div class="controls">
         <button class="primary" id="newHand">Start Hand</button>
@@ -505,7 +506,7 @@ class StudHTTPRequestHandler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:
         path = urlparse(self.path).path
         if path == "/":
-            self._send_html(INDEX_HTML)
+            self._send_html(INDEX_HTML_TEMPLATE.replace("__BUILD_ID__", build_id()))
             return
 
         parts = self._path_parts(path)
