@@ -78,8 +78,7 @@ class RangeEquityStudAgent:
                 return AgentDecision("raise", _reason("raising", estimate, pot_odds))
 
         if "bet" in request.legal_actions:
-            bet_odds = request.raise_amount / (request.pot + request.raise_amount) if request.pot else 1.0
-            if estimate.equity >= max(bet_odds + pressure_edge, estimate.fair_share + value_edge):
+            if estimate.equity >= estimate.fair_share + value_edge:
                 return AgentDecision("bet", _reason("betting", estimate, pot_odds))
 
         if request.call_amount > 0:

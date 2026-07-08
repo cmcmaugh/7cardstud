@@ -1,4 +1,4 @@
-from stud_sim.agents import DecisionRequest, _dead_exposed_cards_from_history, _estimate_equity
+from stud_sim.agents import DecisionRequest, RangeEquityStudAgent, _dead_exposed_cards_from_history, _estimate_equity
 from stud_sim.cards import Card
 import random
 
@@ -41,3 +41,30 @@ def test_equity_accounts_for_folded_dead_exposed_cards() -> None:
     estimate = _estimate_equity(request, random.Random(11), 80)
 
     assert estimate.equity < 0.35
+
+
+def test_agent_value_bets_strong_equity_even_in_small_pot() -> None:
+    request = DecisionRequest(
+        seat_name="Hero",
+        street="sixth",
+        legal_actions=["check", "bet"],
+        call_amount=0,
+        raise_amount=8,
+        pot=8,
+        bankroll=188,
+        private_cards="K♣ 7♣",
+        exposed_cards="Q♣ J♦ K♥ Q♠",
+        visible_table=(
+            "Hero: Q♣ J♦ K♥ Q♠ | Seat 2: 9♠ 5♣ A♠ Q♥ | "
+            "Seat 3: 7♥ 2♦ 8♥ K♦ | Seat 4: 6♦ 6♥ 4♦ 8♣"
+        ),
+        action_history=[
+            "Fourth street: Hero: Q♣ J♦ | Seat 2: 9♠ 5♣ | Seat 3: 7♥ 2♦ | Seat 4: 6♦ 6♥",
+            "Fifth street: Hero: Q♣ J♦ K♥ | Seat 2: 9♠ 5♣ A♠ | Seat 3: 7♥ 2♦ 8♥ | Seat 4: 6♦ 6♥ 4♦",
+            "Sixth street: Hero: Q♣ J♦ K♥ Q♠ | Seat 2: 9♠ 5♣ A♠ Q♥ | Seat 3: 7♥ 2♦ 8♥ K♦ | Seat 4: 6♦ 6♥ 4♦ 8♣",
+        ],
+    )
+
+    decision = RangeEquityStudAgent("Advisor", seed=3, simulations=180).decide(request)
+
+    assert decision.action == "bet"
