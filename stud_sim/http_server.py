@@ -106,6 +106,7 @@ INDEX_HTML = """<!doctype html>
     }
     .seat.hero { border-color: #f2c14e; box-shadow: inset 0 0 0 1px rgba(242,193,78,.3); }
     .seat.starter { outline: 2px solid #5fd0a5; outline-offset: -4px; }
+    .seat.turn { box-shadow: 0 0 0 3px rgba(242,193,78,.42), inset 0 0 0 1px rgba(242,193,78,.38); }
     .seat.folded { opacity: .55; }
     .seat h2 { margin: 0 0 8px; font-size: 15px; font-weight: 700; }
     .badges { display: flex; gap: 6px; flex-wrap: wrap; min-height: 22px; margin-bottom: 6px; }
@@ -142,7 +143,14 @@ INDEX_HTML = """<!doctype html>
       background: #1a1d1f;
       padding: 14px;
     }
+    .panel-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
     .panel h2 { margin: 0 0 10px; font-size: 16px; }
+    .panel-heading h2 { margin: 0; }
+    .mini {
+      min-height: 30px;
+      padding: 0 9px;
+      font-size: 12px;
+    }
     .decision { color: #f2c14e; font-weight: 700; }
     .thinking {
       display: inline-flex;
@@ -231,7 +239,10 @@ INDEX_HTML = """<!doctype html>
           <div class="error" id="error"></div>
         </section>
         <section class="panel">
-          <h2>Log</h2>
+          <div class="panel-heading">
+            <h2>Log</h2>
+            <button class="mini" id="copyLog">Copy</button>
+          </div>
           <ul class="log" id="log"></ul>
         </section>
       </aside>
@@ -292,6 +303,11 @@ INDEX_HTML = """<!doctype html>
         detail.textContent = review.explanation;
         block.appendChild(detail);
         if (!review.correct && review.prompt) {
+          const copy = document.createElement("button");
+          copy.className = "mini";
+          copy.textContent = "Copy prompt";
+          copy.onclick = () => copyText(review.prompt, copy);
+          block.appendChild(copy);
           const prompt = document.createElement("textarea");
           prompt.className = "prompt";
           prompt.readOnly = true;
@@ -322,7 +338,7 @@ INDEX_HTML = """<!doctype html>
         const left = 50 + Math.cos(angle) * 36;
         const top = 50 + Math.sin(angle) * 39;
         const section = document.createElement("section");
-        section.className = "seat" + (seat.name === "Hero" ? " hero" : "") + (seat.started_current_round ? " starter" : "") + (seat.folded ? " folded" : "");
+        section.className = "seat" + (seat.name === "Hero" ? " hero" : "") + (pending && pending.seat === seat.name ? " turn" : "") + (seat.started_current_round ? " starter" : "") + (seat.folded ? " folded" : "");
         section.style.left = `${left}%`;
         section.style.top = `${top}%`;
         const title = document.createElement("h2");
@@ -335,6 +351,12 @@ INDEX_HTML = """<!doctype html>
           starter.className = "badge";
           starter.textContent = "acts first";
           badges.appendChild(starter);
+        }
+        if (pending && pending.seat === seat.name) {
+          const turn = document.createElement("span");
+          turn.className = "badge";
+          turn.textContent = "your turn";
+          badges.appendChild(turn);
         }
         section.appendChild(badges);
         const chips = document.createElement("p");
@@ -373,6 +395,22 @@ INDEX_HTML = """<!doctype html>
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || response.statusText);
       return data;
+    }
+
+    async function copyText(text, button) {
+      try {
+        await navigator.clipboard.writeText(text);
+        const original = button.textContent;
+        button.textContent = "Copied";
+        setTimeout(() => { button.textContent = original; }, 1200);
+      } catch (error) {
+        $("error").textContent = "Copy failed; select and copy manually.";
+      }
+    }
+
+    function copyLog() {
+      const lines = Array.from($("log").querySelectorAll("li")).map((item) => item.textContent);
+      copyText(lines.join("\\n"), $("copyLog"));
     }
 
     async function newHand() {
@@ -419,6 +457,7 @@ INDEX_HTML = """<!doctype html>
 
     $("newHand").onclick = newHand;
     $("resetGame").onclick = resetGame;
+    $("copyLog").onclick = copyLog;
   </script>
 </body>
 </html>
