@@ -49,7 +49,7 @@ INDEX_HTML = """<!doctype html>
     * { box-sizing: border-box; }
     body { margin: 0; min-height: 100vh; background: #121416; }
     button, input, select { font: inherit; }
-    .app { max-width: 1120px; margin: 0 auto; padding: 24px; }
+    .app { max-width: 1480px; margin: 0 auto; padding: 24px; }
     header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
     h1 { margin: 0; font-size: 26px; line-height: 1.1; }
     .build { color: #aeb8b3; font-size: 12px; margin-top: 4px; }
@@ -75,9 +75,9 @@ INDEX_HTML = """<!doctype html>
       padding: 0 10px;
       width: 92px;
     }
-    main { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 18px; }
+    main { display: grid; grid-template-columns: minmax(880px, 1fr) 380px; gap: 22px; }
     .table {
-      min-height: 560px;
+      min-height: 700px;
       border: 1px solid #3c4a43;
       border-radius: 8px;
       background: radial-gradient(ellipse at center, #1f6a47 0%, #164d37 58%, #123629 100%);
@@ -87,12 +87,12 @@ INDEX_HTML = """<!doctype html>
     .status { display: flex; justify-content: space-between; gap: 12px; color: #e7dcc8; margin-bottom: 14px; }
     .seats {
       position: relative;
-      min-height: 500px;
+      min-height: 620px;
       margin-top: 8px;
     }
     .table-felt {
       position: absolute;
-      inset: 86px 118px 86px;
+      inset: 120px 170px 108px;
       border: 1px solid rgba(243,240,232,.22);
       border-radius: 999px;
       background: rgba(3, 17, 12, .28);
@@ -104,8 +104,8 @@ INDEX_HTML = """<!doctype html>
       border-radius: 8px;
       background: rgba(11, 19, 16, .66);
       padding: 12px;
-      min-height: 126px;
-      width: clamp(176px, 26%, 230px);
+      min-height: 118px;
+      width: clamp(162px, 20%, 210px);
       position: absolute;
       transform: translate(-50%, -50%);
     }
@@ -127,12 +127,12 @@ INDEX_HTML = """<!doctype html>
       font-size: 12px;
       font-weight: 700;
     }
-    .cards { display: flex; gap: 6px; flex-wrap: wrap; min-height: 38px; margin: 8px 0; }
+    .cards { display: flex; gap: 5px; flex-wrap: wrap; min-height: 38px; margin: 8px 0; }
     .card {
       display: inline-grid;
       place-items: center;
-      width: 34px;
-      height: 46px;
+      width: 32px;
+      height: 44px;
       border-radius: 5px;
       background: #faf8ef;
       color: #191817;
@@ -219,7 +219,7 @@ INDEX_HTML = """<!doctype html>
     }
     .log li { padding: 7px 0; border-top: 1px solid #2a3033; }
     .error { color: #ff9a88; min-height: 20px; }
-    @media (max-width: 840px) {
+    @media (max-width: 1180px) {
       .app { padding: 16px; }
       header, main { display: block; }
       .controls { margin-top: 12px; }
@@ -367,8 +367,8 @@ INDEX_HTML = """<!doctype html>
       const displaySeats = [...state.seats, ...(state.busted_seats || []).map((seat) => ({...seat, busted: true, folded: true, exposed_cards: "", private_cards: "", in_play: 0}))];
       displaySeats.forEach((seat, index) => {
         const angle = (90 + (index * 360 / Math.max(displaySeats.length, 2))) * Math.PI / 180;
-        const left = 50 + Math.cos(angle) * 36;
-        const top = 50 + Math.sin(angle) * 39;
+        const left = 50 + Math.cos(angle) * 39;
+        const top = 50 + Math.sin(angle) * 41;
         const section = document.createElement("section");
         section.className = "seat" + (seat.name === "Hero" ? " hero" : "") + (pending && pending.seat === seat.name ? " turn" : "") + (seat.started_current_round ? " starter" : "") + (seat.busted ? " busted" : "") + (seat.folded ? " folded" : "");
         section.style.left = `${left}%`;
