@@ -131,7 +131,11 @@ class EquityEstimate:
 def _estimate_equity(request: DecisionRequest, random_source: random.Random, simulations: int) -> EquityEstimate:
     hero_cards = _parse_cards(f"{request.private_cards} {request.exposed_cards}")
     opponent_boards = _parse_visible_table(request.visible_table, request.seat_name)
-    known_cards = hero_cards + [card for board in opponent_boards for card in board]
+    known_cards = _unique_cards(
+        hero_cards
+        + [card for board in opponent_boards for card in board]
+        + _dead_exposed_cards_from_history(request.action_history)
+    )
     deck = [Card(rank, suit) for suit in SUITS for rank in RANKS if Card(rank, suit) not in known_cards]
     fair_share = 1.0 / (len(opponent_boards) + 1)
     implied_edge = _draw_implied_edge(hero_cards)
@@ -303,6 +307,31 @@ def _parse_visible_table(visible_table: str, hero_name: str) -> list[list[Card]]
             continue
         boards.append(_parse_cards(cards))
     return boards
+
+
+def _dead_exposed_cards_from_history(action_history: list[str]) -> list[Card]:
+    cards: list[Card] = []
+    for line in action_history:
+        if " street: " not in line:
+            continue
+        _street, table = line.split(" street: ", 1)
+        for segment in table.split("|"):
+            if ":" not in segment:
+                continue
+            _name, exposed_cards = segment.split(":", 1)
+            cards.extend(_parse_cards(exposed_cards))
+    return cards
+
+
+def _unique_cards(cards: list[Card]) -> list[Card]:
+    seen: set[Card] = set()
+    unique = []
+    for card in cards:
+        if card in seen:
+            continue
+        seen.add(card)
+        unique.append(card)
+    return unique
 
 
 def _seat_name_for_board(visible_table: str, board: list[Card]) -> str | None:
