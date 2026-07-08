@@ -69,12 +69,9 @@ class RangeEquityStudAgent:
         pot_odds = request.call_amount / pot_after_call if pot_after_call else 0.0
         opponents = max(1, len(estimate.opponent_boards))
         value_edge = 0.08 if opponents <= 2 else 0.12
-        pressure_edge = 0.16 if opponents <= 2 else 0.22
 
         if "raise" in request.legal_actions:
-            raise_cost = request.call_amount + request.raise_amount
-            raise_odds = raise_cost / (request.pot + raise_cost) if request.pot + raise_cost else 1.0
-            if estimate.equity >= max(raise_odds + pressure_edge, estimate.fair_share + value_edge):
+            if estimate.equity >= estimate.fair_share + value_edge:
                 return AgentDecision("raise", _reason("raising", estimate, pot_odds))
 
         if "bet" in request.legal_actions:

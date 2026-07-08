@@ -68,3 +68,29 @@ def test_agent_value_bets_strong_equity_even_in_small_pot() -> None:
     decision = RangeEquityStudAgent("Advisor", seed=3, simulations=180).decide(request)
 
     assert decision.action == "bet"
+
+
+def test_agent_value_raises_buried_aces_on_third_street() -> None:
+    request = DecisionRequest(
+        seat_name="Hero",
+        street="third",
+        legal_actions=["fold", "call", "raise"],
+        call_amount=2,
+        raise_amount=4,
+        pot=9,
+        bankroll=199,
+        private_cards="A♠ A♦",
+        exposed_cards="J♣",
+        visible_table="Hero: J♣ | Seat 3: K♥ | Seat 4: Q♣ | Seat 5: 3♦ | Seat 6: 8♦",
+        action_history=[
+            "Antes posted: pot $5",
+            "Third street: Hero: J♣ | Seat 3: K♥ | Seat 4: Q♣ | Seat 5: 3♦ | Seat 6: 8♦",
+            "Seat 5 brings in for $2",
+            "Seat 6 calls $2",
+            "Hero private cards: A♠ A♦",
+        ],
+    )
+
+    decision = RangeEquityStudAgent("Advisor", seed=2, simulations=900).decide(request)
+
+    assert decision.action == "raise"
