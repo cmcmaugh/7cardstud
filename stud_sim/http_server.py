@@ -334,7 +334,7 @@ INDEX_HTML = """<!doctype html>
         detail.className = "meta";
         detail.textContent = review.explanation;
         block.appendChild(detail);
-        if (!review.correct && review.prompt) {
+        if (review.prompt) {
           const copy = document.createElement("button");
           copy.className = "mini";
           copy.textContent = "Copy prompt";

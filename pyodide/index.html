@@ -340,7 +340,7 @@ reset_game = browser_api.reset_game
         detail.className = "meta";
         detail.textContent = review.explanation;
         block.appendChild(detail);
-        if (!review.correct && review.prompt) {
+        if (review.prompt) {
           const copy = document.createElement("button");
           copy.className = "mini";
           copy.textContent = "Copy prompt";

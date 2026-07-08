@@ -330,30 +330,46 @@ def _decision_review(
         "correct": correct,
         "chosen_action": chosen.action,
         "recommended_action": recommended.action,
-        "explanation": "Matched the range-equity recommendation." if correct else recommended.reason,
+        "explanation": recommended.reason,
+        "prompt": _decision_prompt(request, chosen, recommended, correct),
     }
-    if not correct:
-        review["prompt"] = "\n".join(
-            [
-                "Analyze this 7-card stud decision.",
-                "",
-                "Game: six-handed $4/$8 limit 7-card stud",
-                f"Street: {request.street}",
-                f"Pot before my action: ${request.pot}",
-                f"Legal actions: {', '.join(request.legal_actions)}",
-                f"Call amount: ${request.call_amount}",
-                f"Raise amount: ${request.raise_amount}",
-                f"My private cards: {request.private_cards}",
-                f"My exposed cards: {request.exposed_cards}",
-                f"Visible table: {request.visible_table}",
-                f"Recent action: {' | '.join(request.action_history[-12:])}",
-                "",
-                f"I chose: {chosen.action}",
-                f"The simulator's range-equity advisor preferred: {recommended.action}",
-                f"Advisor explanation: {recommended.reason}",
-                "",
-                "Was my action a mistake? Explain using pot odds, live cards, likely opponent ranges, "
-                "reverse implied odds, and better alternative lines.",
-            ]
-        )
     return review
+
+
+def _decision_prompt(
+    request: DecisionRequest,
+    chosen: AgentDecision,
+    recommended: AgentDecision,
+    correct: bool,
+) -> str:
+    if correct:
+        closing_question = (
+            "Was this the right action? Explain why it was good, and mention the main risks or close alternatives."
+        )
+    else:
+        closing_question = (
+            "Was my action a mistake? Explain using pot odds, live cards, likely opponent ranges, "
+            "reverse implied odds, and better alternative lines."
+        )
+    return "\n".join(
+        [
+            "Analyze this 7-card stud decision.",
+            "",
+            "Game: six-handed $4/$8 limit 7-card stud",
+            f"Street: {request.street}",
+            f"Pot before my action: ${request.pot}",
+            f"Legal actions: {', '.join(request.legal_actions)}",
+            f"Call amount: ${request.call_amount}",
+            f"Raise amount: ${request.raise_amount}",
+            f"My private cards: {request.private_cards}",
+            f"My exposed cards: {request.exposed_cards}",
+            f"Visible table: {request.visible_table}",
+            f"Recent action: {' | '.join(request.action_history[-12:])}",
+            "",
+            f"I chose: {chosen.action}",
+            f"The simulator's range-equity advisor preferred: {recommended.action}",
+            f"Advisor explanation: {recommended.reason}",
+            "",
+            closing_question,
+        ]
+    )
