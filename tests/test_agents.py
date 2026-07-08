@@ -94,3 +94,32 @@ def test_agent_value_raises_buried_aces_on_third_street() -> None:
     decision = RangeEquityStudAgent("Advisor", seed=2, simulations=900).decide(request)
 
     assert decision.action == "raise"
+
+
+def test_agent_does_not_use_implied_odds_on_seventh_street() -> None:
+    request = DecisionRequest(
+        seat_name="Hero",
+        street="seventh",
+        legal_actions=["fold", "call", "raise"],
+        call_amount=8,
+        raise_amount=8,
+        pot=269,
+        bankroll=120,
+        private_cards="A♠ Q♦ 9♠",
+        exposed_cards="3♦ 5♦ 8♣ 4♣",
+        visible_table=(
+            "Hero: 3♦ 5♦ 8♣ 4♣ | Seat 3: T♣ A♥ 4♠ 8♥ | "
+            "Seat 5: 3♠ K♦ 6♠ T♦ | Seat 6: Q♠ K♠ 6♥ 2♠"
+        ),
+        action_history=[
+            "Sixth street: Hero: 3♦ 5♦ 8♣ 4♣ | Seat 3: T♣ A♥ 4♠ 8♥ | Seat 5: 3♠ K♦ 6♠ T♦ | Seat 6: Q♠ K♠ 6♥ 2♠",
+            "Seventh street: Hero: 3♦ 5♦ 8♣ 4♣ | Seat 3: T♣ A♥ 4♠ 8♥ | Seat 5: 3♠ K♦ 6♠ T♦ | Seat 6: Q♠ K♠ 6♥ 2♠",
+            "Seat 5 bets to $8",
+            "Seat 6 calls $8",
+            "Hero private cards: A♠ Q♦ 9♠",
+        ],
+    )
+
+    decision = RangeEquityStudAgent("Advisor", seed=4, simulations=180).decide(request)
+
+    assert decision.action == "fold"

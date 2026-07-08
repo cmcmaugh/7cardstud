@@ -134,7 +134,7 @@ def _estimate_equity(request: DecisionRequest, random_source: random.Random, sim
     )
     deck = [Card(rank, suit) for suit in SUITS for rank in RANKS if Card(rank, suit) not in known_cards]
     fair_share = 1.0 / (len(opponent_boards) + 1)
-    implied_edge = _draw_implied_edge(hero_cards)
+    implied_edge = _draw_implied_edge(hero_cards, request.street)
 
     if not opponent_boards:
         return EquityEstimate(1.0, 1.0, implied_edge, opponent_boards, 1)
@@ -267,7 +267,9 @@ def _draw_score(cards: list[Card]) -> int:
     return score
 
 
-def _draw_implied_edge(cards: list[Card]) -> float:
+def _draw_implied_edge(cards: list[Card], street: str) -> float:
+    if street == "seventh":
+        return 0.0
     return min(0.08, _draw_score(cards) * 0.025)
 
 
