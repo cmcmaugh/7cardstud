@@ -30,6 +30,31 @@ The browser UI starts interactive hands, shows your private and exposed cards, a
 - `GET /hands/{hand_id}`: inspect a hand.
 - `POST /hands/{hand_id}/actions`: submit `fold`, `check`, `call`, `bet`, or `raise`.
 
+## Easy Local Launch
+
+For someone playing locally, install Python 3 and download this project.
+
+On Windows, double-click:
+
+```text
+play-poker.bat
+```
+
+On macOS or Linux, run:
+
+```bash
+./play-poker.sh
+```
+
+If the shell script is not executable yet:
+
+```bash
+chmod +x play-poker.sh
+./play-poker.sh
+```
+
+The launcher picks a free local port, starts the game, and opens the browser automatically.
+
 ## Deploy on Render
 
 The included `render.yaml` defines a free Python web service. Render provides the `PORT` environment variable; the service starts with:
