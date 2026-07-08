@@ -52,6 +52,7 @@ INDEX_HTML = """<!doctype html>
     .app { max-width: 1120px; margin: 0 auto; padding: 24px; }
     header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
     h1 { margin: 0; font-size: 26px; line-height: 1.1; }
+    .build { color: #aeb8b3; font-size: 12px; margin-top: 4px; }
     .controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
     .toolbar { display: flex; gap: 8px; flex-wrap: wrap; margin: 16px 0; min-height: 44px; }
     button {
@@ -233,7 +234,10 @@ INDEX_HTML = """<!doctype html>
 <body>
   <div class="app">
     <header>
-      <h1>7-Card Stud</h1>
+      <div>
+        <h1>7-Card Stud</h1>
+        <div class="build">build 396677b</div>
+      </div>
       <div class="controls">
         <button class="primary" id="newHand">Start Hand</button>
         <button id="resetGame">Reset Game</button>
