@@ -79,7 +79,8 @@ class RangeEquityStudAgent:
                 return AgentDecision("bet", _reason("betting", estimate, pot_odds))
 
         if request.call_amount > 0:
-            if estimate.equity + estimate.implied_edge < pot_odds:
+            call_hurdle = pot_odds + _third_street_call_margin(request)
+            if estimate.equity + estimate.implied_edge < call_hurdle:
                 return AgentDecision("fold", _reason("folding", estimate, pot_odds))
             return AgentDecision("call", _reason("calling", estimate, pot_odds))
 
@@ -271,6 +272,27 @@ def _draw_implied_edge(cards: list[Card], street: str) -> float:
     if street == "seventh":
         return 0.0
     return min(0.08, _draw_score(cards) * 0.025)
+
+
+def _third_street_call_margin(request: DecisionRequest) -> float:
+    if request.street != "third" or request.call_amount <= 0:
+        return 0.0
+
+    cards = _parse_cards(f"{request.private_cards} {request.exposed_cards}")
+    if len(cards) != 3:
+        return 0.0
+
+    ranks = [card.rank for card in cards]
+    has_pair = len(set(ranks)) < len(ranks)
+    suited = max(sum(1 for card in cards if card.suit == suit) for suit in SUITS)
+    connected = _connected_count(cards)
+    high_cards = sum(1 for card in cards if card.value >= 11)
+
+    if has_pair or suited == 3 or connected >= 3:
+        return 0.0
+    if high_cards >= 2:
+        return 0.03
+    return 0.07
 
 
 def _connected_count(cards: list[Card]) -> int:

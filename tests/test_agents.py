@@ -123,3 +123,56 @@ def test_agent_does_not_use_implied_odds_on_seventh_street() -> None:
     decision = RangeEquityStudAgent("Advisor", seed=4, simulations=180).decide(request)
 
     assert decision.action == "fold"
+
+
+def test_agent_tightens_weak_third_street_peels() -> None:
+    request = DecisionRequest(
+        seat_name="Hero",
+        street="third",
+        legal_actions=["fold", "call", "raise"],
+        call_amount=2,
+        raise_amount=4,
+        pot=6,
+        bankroll=199,
+        private_cards="4♥ 3♣",
+        exposed_cards="9♦",
+        visible_table="Hero: 9♦ | Seat 2: 8♠ | Seat 3: 5♦",
+        action_history=[
+            "Antes posted: pot $4",
+            "Third street: Hero: 9♦ | Seat 2: 8♠ | Seat 3: 5♦ | Seat 6: 6♠",
+            "Seat 3 brings in for $2",
+            "Seat 6 folds",
+            "Hero private cards: 4♥ 3♣",
+        ],
+    )
+
+    decision = RangeEquityStudAgent("Advisor", seed=8, simulations=180).decide(request)
+
+    assert decision.action == "fold"
+
+
+def test_agent_still_continues_playable_third_street_three_flush() -> None:
+    request = DecisionRequest(
+        seat_name="Hero",
+        street="third",
+        legal_actions=["fold", "call", "raise"],
+        call_amount=2,
+        raise_amount=4,
+        pot=8,
+        bankroll=199,
+        private_cards="K♥ 3♥",
+        exposed_cards="A♥",
+        visible_table="Hero: A♥ | Seat 2: K♣ | Seat 3: J♣ | Seat 4: 2♠",
+        action_history=[
+            "Antes posted: pot $6",
+            "Third street: Hero: A♥ | Seat 2: K♣ | Seat 3: J♣ | Seat 4: 2♠ | Seat 5: 5♣ | Seat 6: T♠",
+            "Seat 4 brings in for $2",
+            "Seat 5 folds",
+            "Seat 6 folds",
+            "Hero private cards: K♥ 3♥",
+        ],
+    )
+
+    decision = RangeEquityStudAgent("Advisor", seed=9, simulations=180).decide(request)
+
+    assert decision.action in {"call", "raise"}
